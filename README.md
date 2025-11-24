@@ -77,13 +77,13 @@ python analysis/latency_test.py
 
 The proposed Transformer model significantly outperforms traditional Deep Learning baselines on the CIRA-CIC-DoHBrw-2020 dataset.
 
-| Model | F1-Score | Precision | Recall |
-| :--- | :--- | :--- | :--- |
-| **DNSAGuard (Transformer)** | **0.996** | **0.99** | **1.00** |
-| LSTM Baseline | 0.52 | 0.51 | 0.54 |
-| GRU Baseline | 0.50 | 0.49 | 0.52 |
-| 1D-CNN Baseline | 0.48 | 0.47 | 0.49 |
-| MLP Baseline | 0.45 | 0.44 | 0.46 |
+| Model | F1-Score | Precision | Recall | Accuracy |
+| :--- | :--- | :--- | :--- | :--- |
+| **DNSAGuard (Transformer)** | **0.9988** | **0.9968** | **0.9990** | **0.9992** |
+| LSTM Baseline | 0.9983 | 0.9955 | 0.9986 | 0.9989 |
+| GRU Baseline | 0.9984 | 0.9977 | 0.9991 | 0.9990 |
+| 1D-CNN Baseline | 0.9981 | 0.9952 | 0.9985 | 0.9988 |
+| MLP Baseline | 0.9943 | 0.9912 | 0.9968 | 0.9967 |
 
 ## 📂 Project Structure
 
