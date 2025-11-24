@@ -7,20 +7,6 @@ import csv
 import pickle
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from torch.utils.data import Dataset, DataLoader
-
-# Import tất cả các model
-from model import TransformerClassifier, LSTMBaseline, GRUBaseline, CNNBaseline, MLPBaseline
-
-# ==================================================================
-# --- CONFIG ---
-# ==================================================================
-CONFIG = {
-    "sequence_length": 50,
     "features": ['size', 'time'], 
     "batch_size": 2048,      
     "learning_rate": 0.0005,

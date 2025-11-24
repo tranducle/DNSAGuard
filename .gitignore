@@ -1,28 +1,54 @@
-# Datasets and large data files
-DATASET/
-*.pkl
-*.pt
-*.csv
-
-# Results and logs
-comparison_results/
-comparison_results_*/
-paper_figures/
-paper_figures_*/
-training_reports/
-RESEARCH_LOG.txt
-RESEARCH MEMORANDUM*.txt
-GEMINI.txt
-imbalance_ratio*.txt
-
-# Word documents and PDFs (as requested to focus on Python project)
-*.docx
-*.pdf
-
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Data files (Do NOT upload large datasets)
+*.pkl
+*.pt
+*.csv
+DATASET/
+all_clients_raw.pkl
+temp_*.pkl
+final_test_dataset.pt
+autoencoder_model.pt
+supervised_transformer.pt
 
 # IDE settings
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# System
+.DS_Store
+Thumbs.db
+
+# Outputs and results
+comparison_results/
+comparison_results_*/
+training_reports/
+paper_figures/
+paper_figures_*/
+
+# Logs and temporary files
+*.log
+RESEARCH_LOG.txt
+RESEARCH*.txt
+GEMINI.txt
+imbalance_ratio*.txt
+
+# Documents (keep only in paper/ if needed)
+*.docx
+*.pdf
+!paper/*.pdf
+
+# Old/redundant scripts
+advanced_visualize_poor.py
+train_classifier.py
+visualize_results.py
+fix_cm_plot.py
+generate_paper_figures.py
+custom_dataset.py
+push_to_github.bat

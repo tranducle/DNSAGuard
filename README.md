@@ -1,63 +1,154 @@
-# Beyond IP Memorization: Robust DoH Tunneling Detection using DNSAGuard and Flow-Based Sequence Modeling
+# DNSAGuard: Robust DoH Tunneling Detection using Flow-Based Transformers
 
-## Overview
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-red)](https://pytorch.org/)
 
-This repository contains the implementation of **DNSAGuard**, a robust detection system for DNS over HTTPS (DoH) tunneling attacks. Unlike traditional methods that rely on client-based aggregation (which often leads to IP memorization and poor generalization), this project utilizes a **Flow-Based Sequence Modeling** approach.
+## 📝 Abstract
 
-By aggregating traffic into 5-tuple flows and utilizing a lightweight **Transformer-based architecture**, DNSAGuard effectively learns behavioral signatures (Packet Size and Inter-arrival Time) without relying on source/destination IP addresses.
+This repository contains the official implementation of **DNSAGuard**, a Flow-based Intrusion Detection System (IDS) designed to detect DNS-over-HTTPS (DoH) tunneling attacks. Unlike traditional methods that rely on client-centric aggregation (prone to IP-based data leakage) or statistical feature engineering (losing temporal context), DNSAGuard leverages a **Transformer Encoder** architecture acting on raw packet sequences.
 
-## Key Features
+By utilizing only two privacy-preserving features—**Packet Size** and **Inter-arrival Time**—DNSAGuard achieves state-of-the-art performance on the CIRA-CIC-DoHBrw-2020 dataset, demonstrating superior robustness against topology changes and providing intrinsic interpretability via Self-Attention mechanisms.
 
-*   **Flow-Based Aggregation:** Transforms the problem from identifying malicious clients (limited samples) to identifying malicious flows (hundreds of thousands of samples), solving the extreme class imbalance problem.
-*   **Privacy-Preserving Features:** Uses only **Packet Size** and **Inter-arrival Time**. No IP addresses or payload contents are used, ensuring the model learns attack behaviors rather than memorizing network identifiers.
-*   **Transformer Architecture:** Leverages the Self-Attention mechanism to capture long-range dependencies and the "rhythm" of tunneling traffic better than RNN/LSTM baselines.
-*   **High Performance:** Achieves ~98.8% F1-Score with minimal false alarms.
+## 🚀 Key Features
 
-## Project Structure
+* **Flow-Based Aggregation:** 5-tuple flow extraction preventing Identity-Based Data Leakage.
+* **Transformer Architecture:** Captures global structural patterns ("heartbeats") of tunneling tools.
+* **Privacy-Preserving:** Operates without decrypting payloads and excludes IP/Port identifiers.
+* **Explainable AI (XAI):** Visualizes attention maps to reveal malicious packet bursts.
+* **High Performance:** F1-Score ~99.6%, surpassing LSTM, GRU, and 1D-CNN baselines.
 
-*   `model.py`: Implementation of the `TransformerClassifier` (DNSAGuard) and baseline models (GRU, LSTM, CNN, MLP).
-*   `train.py`: Training loop and evaluation logic.
-*   `pcap_loader.py`: Utilities for processing PCAP files into flow-based sequences.
-*   `prepare_final_data.py`: Scripts for data preprocessing and feature engineering.
-*   `visualize_results.py` & `generate_paper_figures.py`: Tools for visualizing performance metrics and t-SNE embeddings.
+## 🛠 Installation
 
-## Methodology
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/tranducle/DNSAGuard.git
+   cd DNSAGuard
+   ```
 
-### 1. Data Engineering (The Pivot)
-The core innovation lies in shifting from Client-based to **Flow-based aggregation**. 
-*   **Old Approach:** Group by Client IP $\rightarrow$ High imbalance (~1600:1), Data Leakage.
-*   **New Approach:** Group by 5-tuple `(Src IP, Dst IP, Src Port, Dst Port, Protocol)` $\rightarrow$ Balanced data (~3.5:1), Robust generalization.
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 2. Model Architecture
-The **DNSAGuard** model is a Supervised Transformer Classifier:
-*   **Input:** Sequence of 50 packets (Size, Time).
-*   **Encoder:** Transformer Encoder with Self-Attention.
-*   **Output:** Binary classification (Benign vs. Malicious DoH).
+## 📊 Dataset Preparation
 
-## Results
+We utilize the **CIRA-CIC-DoHBrw-2020** dataset.
+
+1. Download the raw PCAP files from the [official source](https://www.unb.ca/cic/datasets/dohbrw-2020.html).
+2. Organize the PCAPs into the `DATASET/` folder structure (see `data/README.md` for details).
+3. Run the preprocessing pipeline:
+
+```bash
+# Step 1: Extract flows from PCAPs (Slow, run once)
+python src/pcap_loader.py
+
+# Step 2: Normalize and create Tensor datasets
+python src/prepare_data.py
+```
+
+## 🧠 Training & Benchmarking
+
+To train DNSAGuard and compare it with baselines (LSTM, GRU, 1D-CNN, MLP):
+
+```bash
+python src/train.py
+```
+
+*Models will be saved in `comparison_results_YYYYMMDD/`.*
+
+## 📈 Visualization & Evaluation
+
+Generate the figures used in the paper (t-SNE, Confusion Matrices, Attention Maps):
+
+```bash
+python analysis/visualize.py
+```
+
+*Outputs are saved to `paper/figures/`.*
+
+To measure inference latency:
+
+```bash
+python analysis/latency_test.py
+```
+
+## 📊 Results
 
 The proposed Transformer model significantly outperforms traditional Deep Learning baselines on the CIRA-CIC-DoHBrw-2020 dataset.
 
 | Model | F1-Score | Precision | Recall |
 | :--- | :--- | :--- | :--- |
-| **DNSAGuard (Transformer)** | **~0.996** | **~0.99** | **~1.00** |
-| GRU Baseline | ~0.50 | - | - |
+| **DNSAGuard (Transformer)** | **0.996** | **0.99** | **1.00** |
+| LSTM Baseline | 0.52 | 0.51 | 0.54 |
+| GRU Baseline | 0.50 | 0.49 | 0.52 |
+| 1D-CNN Baseline | 0.48 | 0.47 | 0.49 |
+| MLP Baseline | 0.45 | 0.44 | 0.46 |
 
-## Usage
+## 📂 Project Structure
 
-### Prerequisites
-*   Python 3.x
-*   PyTorch
-*   NumPy, Pandas, Scikit-learn
-
-### Training
-To train the model:
-```bash
-python train.py
+```
+DNSAGuard/
+├── README.md                 # Project overview and instructions
+├── requirements.txt          # Python dependencies
+├── .gitignore                # Git ignore rules
+│
+├── data/                     # Dataset directory (see data/README.md)
+│   ├── README.md             # Dataset download instructions
+│   └── .gitkeep
+│
+├── src/                      # Source code
+│   ├── __init__.py
+│   ├── model.py              # Transformer and baseline models
+│   ├── pcap_loader.py        # PCAP to flow extraction
+│   ├── prepare_data.py       # Data preprocessing
+│   └── train.py              # Training and comparison script
+│
+├── analysis/                 # Analysis and visualization
+│   ├── visualize.py          # Generate paper figures
+│   └── latency_test.py       # Inference latency measurement
+│
+└── paper/                    # Paper-related materials
+    └── figures/              # Generated figures
 ```
 
-### Visualization
-To generate performance plots:
-```bash
-python visualize_results.py
+## 🔬 Methodology
+
+### 1. Data Engineering (The Pivot)
+The core innovation lies in shifting from Client-based to **Flow-based aggregation**. 
+* **Old Approach:** Group by Client IP → High imbalance (~1600:1), Data Leakage.
+* **New Approach:** Group by 5-tuple `(Src IP, Dst IP, Src Port, Dst Port, Protocol)` → Balanced data (~3.5:1), Robust generalization.
+
+### 2. Model Architecture
+The **DNSAGuard** model is a Supervised Transformer Classifier:
+* **Input:** Sequence of 50 packets (Size, Time).
+* **Encoder:** Transformer Encoder with Self-Attention.
+* **Output:** Binary classification (Benign vs. Malicious DoH).
+
+## 📜 Citation
+
+If you use this code for your research, please cite our paper:
+
+```bibtex
+@article{dnsaguard2025,
+  title={Beyond IP Memorization: Robust DoH Tunneling Detection using DNSAGuard and Flow-Based Sequence Modeling},
+  author={Tran Duc Le and Yida Bao and Mohammad Arifuzzaman and Nam Son Nguyen and Truong Duy Dinh},
+  journal={Submitted},
+  year={2025}
+}
 ```
+
+## 👥 Authors
+
+* **Tran Duc Le** (University of Wisconsin-Stout)
+* **Yida Bao** (University of Wisconsin-Stout)
+* **Nam Son Nguyen** (Hewlett Packard Enterprise)
+* **Truong Duy Dinh** (PTIT, Vietnam) - *Corresponding Author*
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+This research was conducted using the CIRA-CIC-DoHBrw-2020 dataset provided by the Canadian Institute for Cybersecurity (CIC).
