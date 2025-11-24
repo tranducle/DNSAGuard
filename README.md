@@ -40,7 +40,7 @@ The proposed Transformer model significantly outperforms traditional Deep Learni
 
 | Model | F1-Score | Precision | Recall |
 | :--- | :--- | :--- | :--- |
-| **DNSAGuard (Transformer)** | **~0.988** | **~0.98** | **~1.00** |
+| **DNSAGuard (Transformer)** | **~0.996** | **~0.99** | **~1.00** |
 | GRU Baseline | ~0.50 | - | - |
 
 ## Usage
@@ -61,8 +61,3 @@ To generate performance plots:
 ```bash
 python visualize_results.py
 ```
-
-## Citation
-
-If you use this code, please cite our paper:
-**"Beyond IP Memorization: Robust DoH Tunneling Detection using DNSAGuard and Flow-Based Sequence Modeling"**
