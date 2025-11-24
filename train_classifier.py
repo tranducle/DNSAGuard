@@ -1,0 +1,154 @@
+import torch
+from torch.utils.data import Dataset, DataLoader
+import torch.nn as nn
+import torch.optim as optim
+import time
+import os
+import csv
+import pickle
+import numpy as np
+import pandas as pd
+from datetime import datetime
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+# Import model mới
+from model import TransformerClassifier
+
+# --- CONFIG ---
+CONFIG = {
+    "sequence_length": 50,
+    "features": ['size', 'time'], 
+    "batch_size": 2048,      
+    "learning_rate": 0.0005,
+    "num_epochs": 30,       
+    "hidden_dim": 128,
+    "num_workers": 0 # Tăng lên 4 nếu chạy trên Linux
+}
+
+class SupervisedDataset(Dataset):
+    def __init__(self, sequences, labels):
+        self.sequences = sequences
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.sequences)
+
+    def __getitem__(self, idx):
+        return self.sequences[idx], self.labels[idx]
+
+def load_and_process_data(config):
+    print("Đang tải dữ liệu...")
+    with open('all_clients_raw.pkl', 'rb') as f:
+        all_clients = pickle.load(f)
+        
+    all_sequences = []
+    all_labels = []
+    seq_len = config['sequence_length']
+
+    print("Đang tạo chuỗi...")
+    for client_ip, data in all_clients.items():
+        packets = data['packets']
+        original_len = min(len(packets), seq_len)
+        
+        seq_tensor = torch.zeros(seq_len, len(config['features']), dtype=torch.float)
+        last_time = packets[0][0] if packets else 0.0
+        
+        for i in range(original_len):
+            pkt_time, pkt_size, pkt_proto = packets[i]
+            feat_idx = 0
+            if 'size' in config['features']:
+                seq_tensor[i, feat_idx] = pkt_size
+                feat_idx += 1
+            if 'time' in config['features']:
+                delta = max(0.0, pkt_time - last_time)
+                seq_tensor[i, feat_idx] = delta
+                feat_idx += 1
+            last_time = pkt_time
+            
+        all_sequences.append(seq_tensor)
+        all_labels.append(data['label'])
+
+    X = torch.stack(all_sequences).numpy()
+    y = np.array(all_labels)
+    
+    print(f"Tổng: {len(y)} | Benign: {sum(y==0)} | Malicious: {sum(y==1)}")
+
+    # Scaling
+    print("Đang scale dữ liệu...")
+    N, L, F = X.shape
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X.reshape(-1, F)).reshape(N, L, F)
+    
+    # Xử lý NaN sau khi scale (nếu có)
+    X_scaled = np.nan_to_num(X_scaled, nan=0.0)
+
+    X_final = torch.tensor(X_scaled, dtype=torch.float)
+    y_final = torch.tensor(y, dtype=torch.float)
+
+    # Split
+    X_train, X_test, y_train, y_test = train_test_split(X_final, y_final, test_size=0.2, random_state=42, stratify=y_final)
+    
+    train_ds = SupervisedDataset(X_train, y_train)
+    test_ds = SupervisedDataset(X_test, y_test)
+    
+    return train_ds, test_ds, F
+
+def train_epoch(model, loader, criterion, optimizer, device):
+    model.train()
+    total_loss = 0
+    for seqs, labels in loader:
+        seqs, labels = seqs.to(device), labels.to(device)
+        optimizer.zero_grad()
+        logits = model(seqs)
+        loss = criterion(logits, labels)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    return total_loss / len(loader)
+
+def evaluate(model, loader, device):
+    model.eval()
+    all_preds, all_labels = [], []
+    with torch.no_grad():
+        for seqs, labels in loader:
+            seqs, labels = seqs.to(device), labels.to(device)
+            logits = model(seqs)
+            preds = (torch.sigmoid(logits) > 0.5).float()
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+    
+    acc = accuracy_score(all_labels, all_preds)
+    p = precision_score(all_labels, all_preds, zero_division=0)
+    r = recall_score(all_labels, all_preds, zero_division=0)
+    f1 = f1_score(all_labels, all_preds, zero_division=0)
+    return acc, p, r, f1
+
+if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    
+    train_ds, test_ds, n_feats = load_and_process_data(CONFIG)
+    train_loader = DataLoader(train_ds, batch_size=CONFIG['batch_size'], shuffle=True, num_workers=CONFIG['num_workers'])
+    test_loader = DataLoader(test_ds, batch_size=CONFIG['batch_size'], shuffle=False, num_workers=CONFIG['num_workers'])
+    
+    model = TransformerClassifier(num_features=n_feats, hidden_dim=CONFIG['hidden_dim']).to(device)
+    
+    # Tính trọng số cho Loss (vì dữ liệu vẫn hơi lệch 3.5:1)
+    # Malicious ít hơn -> cần trọng số cao hơn chút
+    pos_weight = torch.tensor([3.5]).to(device) 
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
+    
+    print("\n--- BẮT ĐẦU HUẤN LUYỆN SUPERVISED ---")
+    for epoch in range(CONFIG['num_epochs']):
+        start = time.time()
+        loss = train_epoch(model, train_loader, criterion, optimizer, device)
+        acc, p, r, f1 = evaluate(model, test_loader, device)
+        mins = (time.time() - start) / 60
+        
+        print(f"Epoch {epoch+1:02} | Time: {mins:.2f}m | Loss: {loss:.4f} | Val F1: {f1:.4f} (P: {p:.2f}, R: {r:.2f})")
+        
+    torch.save(model.state_dict(), "supervised_transformer.pt")
+    print("Đã lưu model.")

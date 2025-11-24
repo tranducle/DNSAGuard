@@ -1,0 +1,28 @@
+# Datasets and large data files
+DATASET/
+*.pkl
+*.pt
+*.csv
+
+# Results and logs
+comparison_results/
+comparison_results_*/
+paper_figures/
+paper_figures_*/
+training_reports/
+RESEARCH_LOG.txt
+RESEARCH MEMORANDUM*.txt
+GEMINI.txt
+imbalance_ratio*.txt
+
+# Word documents and PDFs (as requested to focus on Python project)
+*.docx
+*.pdf
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE settings
+.vscode/
+.idea/
